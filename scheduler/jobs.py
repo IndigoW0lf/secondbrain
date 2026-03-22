@@ -90,6 +90,15 @@ def run_raindrop():
         console.print(f"[red]Raindrop ingest failed: {e}[/]")
 
 
+def run_pinterest():
+    console.print(f"\n[bold blue][{datetime.now():%H:%M}] Running Pinterest ingest...[/]")
+    try:
+        from ingestion.pinterest.pinterest_ingest import run
+        run()
+    except Exception as e:
+        console.print(f"[red]Pinterest ingest failed: {e}[/]")
+
+
 def run_all():
     """Full sync — run weekly for larger historical pulls."""
     console.print(f"\n[bold green][{datetime.now():%H:%M}] Running full sync...[/]")
@@ -100,6 +109,7 @@ def run_all():
     run_gdrive()
     run_apple_notes()
     run_raindrop()
+    run_pinterest()
 
 
 if __name__ == "__main__":
@@ -110,6 +120,7 @@ if __name__ == "__main__":
     scheduler.add_job(run_calendar, CronTrigger(hour="7,19", minute="15"))
     scheduler.add_job(run_amazon, CronTrigger(hour="8", minute="45"))
     scheduler.add_job(run_gdrive, CronTrigger(hour="3", minute="0"))
+    scheduler.add_job(run_pinterest, CronTrigger(hour="3", minute="0"))
     scheduler.add_job(run_apple_notes, CronTrigger(day_of_week="sun", hour="4", minute="0"))
     scheduler.add_job(run_raindrop, IntervalTrigger(hours=6))
     scheduler.add_job(run_all, CronTrigger(day_of_week="sun", hour="2", minute="0"))
@@ -121,6 +132,7 @@ if __name__ == "__main__":
     console.print("  Calendar: 7:15am + 7:15pm daily")
     console.print("  Amazon:    8:45am daily")
     console.print("  GDrive:    3am daily")
+    console.print("  Pinterest: 3am daily")
     console.print("  Apple Notes: Sunday 4am")
     console.print("  Raindrop:    every 6 hours")
     console.print("  Full sync: Sunday 2am")
