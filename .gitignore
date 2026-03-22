@@ -1,0 +1,9 @@
+.venv/
+.DS_Store
+
+secrets.env
+config/secrets.env
+config/google_credentials.json
+config/google_token.json
+#Ignore cursor AI rules
+.cursor/rules/codacy.mdc

@@ -1,0 +1,31 @@
+# Core (pydantic 2.10+ has wheels for Python 3.13; older pins built from source)
+fastapi==0.115.6
+uvicorn==0.32.1
+python-dotenv==1.0.1
+pydantic==2.12.0
+apscheduler==3.10.4
+
+# Storage (0.5.0 breaks on NumPy 2.x — np.float_ removed; 0.6.x is compatible)
+chromadb==0.6.3
+# SQLite is built into Python stdlib
+
+# Embeddings (runs locally, no API cost)
+sentence-transformers==3.0.0
+
+# Financial
+plaid-python==24.0.0
+
+# Google APIs
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+google-api-python-client==2.128.0
+
+# Email parsing
+beautifulsoup4==4.12.3
+html2text==2024.2.26
+
+# Utilities
+httpx==0.27.0
+rich==13.7.1          # nice terminal output
+schedule==1.2.1
+arrow==1.3.0          # sane datetime handling
