@@ -196,7 +196,25 @@ def run() -> None:
             embed_ids: list[str] = []
             embed_texts: list[str] = []
             embed_metas: list[dict] = []
-            added = 0
+            synced = 0
+
+            upsert_sql = """
+                INSERT INTO bookmarks
+                    (id, url, title, folder, added_date, description, tags,
+                     note, cover_url, source, embedded)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                ON CONFLICT(id) DO UPDATE SET
+                    url = excluded.url,
+                    title = excluded.title,
+                    folder = excluded.folder,
+                    added_date = excluded.added_date,
+                    description = excluded.description,
+                    tags = excluded.tags,
+                    note = excluded.note,
+                    cover_url = excluded.cover_url,
+                    source = excluded.source,
+                    embedded = excluded.embedded
+            """
 
             for item in track(items, description="Storing & embedding..."):
                 rid = item.get("_id")
@@ -222,13 +240,8 @@ def run() -> None:
                 )
 
                 with get_db() as conn:
-                    cur = conn.execute(
-                        """
-                        INSERT OR IGNORE INTO bookmarks
-                            (id, url, title, folder, added_date, description, tags,
-                             note, cover_url, source)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
+                    conn.execute(
+                        upsert_sql,
                         (
                             row_id,
                             link,
@@ -242,22 +255,21 @@ def run() -> None:
                             SOURCE,
                         ),
                     )
-                    if cur.rowcount:
-                        added += 1
-                        embed_ids.append(row_id)
-                        embed_texts.append(embed_body or title)
-                        embed_metas.append(
-                            {
-                                "source": SOURCE,
-                                "title": title[:200],
-                                "url": link[:500],
-                                "folder": folder[:200],
-                                "added_date": created[:10] if created else "",
-                            }
-                        )
+                synced += 1
+                embed_ids.append(row_id)
+                embed_texts.append(embed_body or title)
+                embed_metas.append(
+                    {
+                        "source": SOURCE,
+                        "title": title[:200],
+                        "url": link[:500],
+                        "folder": folder[:200],
+                        "added_date": created[:10] if created else "",
+                    }
+                )
 
         if embed_ids:
-            console.print(f"Embedding {len(embed_ids)} new bookmark(s) into Chroma...")
+            console.print(f"Embedding {len(embed_ids)} bookmark(s) into Chroma (upsert)...")
             chunk = 200
             for i in range(0, len(embed_ids), chunk):
                 upsert_to_chroma(
@@ -272,8 +284,8 @@ def run() -> None:
                     [(eid,) for eid in embed_ids],
                 )
 
-        console.print(f"[bold green]Done.[/] {added} new bookmark(s) inserted (INSERT OR IGNORE).")
-        log_ingest_finish(log_id, added, 0)
+        console.print(f"[bold green]Done.[/] {synced} Raindrop bookmark(s) upserted.")
+        log_ingest_finish(log_id, synced, 0)
     except httpx.HTTPStatusError as e:
         msg = f"{e.response.status_code} {e.response.text[:200]}"
         console.print(f"[red]Raindrop API error: {msg}[/]")

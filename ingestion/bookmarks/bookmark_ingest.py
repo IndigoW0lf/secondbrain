@@ -136,28 +136,34 @@ def run(file_path: str, source: str = "browser"):
     bookmarks = parse_bookmarks_html(file_path)
     console.print(f"  Parsed {len(bookmarks)} bookmarks")
 
-    with get_db() as conn:
-        existing_urls = set(
-            row[0] for row in conn.execute("SELECT url FROM bookmarks").fetchall()
-        )
+    console.print(f"  Upserting {len(bookmarks)} bookmark row(s) by stable id (url)")
 
-    new_bookmarks = [b for b in bookmarks if b["url"] not in existing_urls]
-    console.print(
-        f"  {len(new_bookmarks)} new, {len(bookmarks) - len(new_bookmarks)} already stored"
-    )
+    upsert_sql = """
+        INSERT INTO bookmarks
+            (id, url, title, folder, added_date, description, tags,
+             note, cover_url, source, embedded)
+        VALUES (?, ?, ?, ?, ?, NULL, '[]', NULL, NULL, ?, 0)
+        ON CONFLICT(id) DO UPDATE SET
+            url = excluded.url,
+            title = excluded.title,
+            folder = excluded.folder,
+            added_date = excluded.added_date,
+            description = excluded.description,
+            tags = excluded.tags,
+            note = excluded.note,
+            cover_url = excluded.cover_url,
+            source = excluded.source,
+            embedded = excluded.embedded
+    """
 
-    added = 0
+    synced = 0
     embed_ids, embed_texts, embed_metas = [], [], []
 
-    for bm in track(new_bookmarks, description="Storing bookmarks..."):
+    for bm in track(bookmarks, description="Storing bookmarks..."):
         bm_id = stable_id(bm["url"])
         with get_db() as conn:
             conn.execute(
-                """
-                INSERT OR IGNORE INTO bookmarks
-                    (id, url, title, folder, added_date, source)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                upsert_sql,
                 (
                     bm_id,
                     bm["url"],
@@ -167,7 +173,7 @@ def run(file_path: str, source: str = "browser"):
                     source,
                 ),
             )
-        added += 1
+        synced += 1
 
         embed_text = f"{bm['title']}\n{bm['url']}\nFolder: {bm['folder']}"
         embed_ids.append(bm_id)
@@ -198,8 +204,8 @@ def run(file_path: str, source: str = "browser"):
                 [(eid,) for eid in embed_ids],
             )
 
-    console.print(f"[bold green]Done.[/] {added} bookmarks stored and embedded.")
-    log_ingest_finish(log_id, added, 0)
+    console.print(f"[bold green]Done.[/] {synced} browser bookmark(s) upserted and embedded.")
+    log_ingest_finish(log_id, synced, 0)
 
 
 if __name__ == "__main__":
