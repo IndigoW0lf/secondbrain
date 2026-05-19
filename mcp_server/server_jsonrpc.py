@@ -234,7 +234,7 @@ def dispatch(req: dict) -> dict | None:
     # Lifecycle
     if method == "initialize":
         return ok({
-            "protocolVersion": "2025-11-25",
+            "protocolVersion": "2024-11-05",
             "capabilities": {"tools": {}},
             "serverInfo": {"name": "secondbrain", "version": "1.0.0"}
         })
